@@ -67,7 +67,7 @@ class CLM_URLS:
     PROCESS = f"{PRODUCTION_URL}/clm/process"
     SEARCH = f"{PRODUCTION_URL}/clm/search"  # 통합검색
     REVIEW = f"{PRODUCTION_URL}/clm/review"  # 검토 요청 조회
-    COMPLETE = f"{PRODUCTION_URL}/clm/complete"  # 체결 계약서 조회
+    COMPLETE = f"{PRODUCTION_URL}/clm/complete?page=0"  # 체결 계약서 조회
     COMPARE = f"{PRODUCTION_URL}/document_compare"  # AI 계약 내용 비교
     PAUSE = f"{PRODUCTION_URL}/clm/complete?is_paused=2"  # 일시 중단 리스트
 

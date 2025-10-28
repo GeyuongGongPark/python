@@ -86,32 +86,30 @@ class ContractComparator:
             print(f"현재 URL: {self.driver.current_url}")
             print(f"페이지 제목: {self.driver.title}")
             
-            # 로그인 페이지 로딩 대기
-            wait = WebDriverWait(self.driver, 15)
+            # 로그인 페이지 로딩 대기 (최적화: k6에서 확인된 셀렉터 우선 사용)
+            wait = WebDriverWait(self.driver, 10)  # 대기 시간 단축
             
-            # 다양한 ID 입력 필드 셀렉터 시도
-            id_selectors = [
-                (By.NAME, "username"),
-                (By.NAME, "email"),
-                (By.NAME, "id"),
-                (By.ID, "username"),
-                (By.ID, "email"),
-                (By.ID, "id"),
-                (By.XPATH, "//input[@type='email']"),
-                (By.XPATH, "//input[@type='text']"),
-                (By.CSS_SELECTOR, "input[placeholder*='이메일']"),
-                (By.CSS_SELECTOR, "input[placeholder*='아이디']"),
-                (By.CSS_SELECTOR, "input[placeholder*='ID']")
-            ]
-            
-            id_field = None
-            for selector_type, selector_value in id_selectors:
-                try:
-                    id_field = wait.until(EC.presence_of_element_located((selector_type, selector_value)))
-                    print(f"✓ ID 필드 발견: {selector_type} = {selector_value}")
-                    break
-                except:
-                    continue
+            # ID 입력 필드 셀렉터 (k6 성능 측정에서 확인된 셀렉터 우선 사용)
+            # 첫 번째 셀렉터로 바로 찾기 시도
+            try:
+                id_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email']")))
+                print("✓ ID 필드 발견: input[type='email']")
+            except:
+                # 폴백: 다른 셀렉터 시도
+                id_selectors = [
+                    (By.XPATH, "//input[@type='email']"),
+                    (By.NAME, "username"),
+                    (By.NAME, "email"),
+                    (By.ID, "username"),
+                ]
+                id_field = None
+                for selector_type, selector_value in id_selectors:
+                    try:
+                        id_field = wait.until(EC.presence_of_element_located((selector_type, selector_value)))
+                        print(f"✓ ID 필드 발견: {selector_type} = {selector_value}")
+                        break
+                    except:
+                        continue
             
             if not id_field:
                 print("✗ ID 입력 필드를 찾을 수 없습니다.")
@@ -125,23 +123,25 @@ class ContractComparator:
             id_field.send_keys(username)
             print("✓ ID 입력 완료")
             
-            # 다양한 비밀번호 입력 필드 셀렉터 시도
-            pw_selectors = [
-                (By.NAME, "password"),
-                (By.ID, "password"),
-                (By.XPATH, "//input[@type='password']"),
-                (By.CSS_SELECTOR, "input[placeholder*='비밀번호']"),
-                (By.CSS_SELECTOR, "input[placeholder*='Password']")
-            ]
-            
-            pw_field = None
-            for selector_type, selector_value in pw_selectors:
-                try:
-                    pw_field = self.driver.find_element(selector_type, selector_value)
-                    print(f"✓ 비밀번호 필드 발견: {selector_type} = {selector_value}")
-                    break
-                except:
-                    continue
+            # 비밀번호 입력 필드 (k6 성능 측정에서 확인된 셀렉터 우선 사용)
+            try:
+                pw_field = self.driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+                print("✓ 비밀번호 필드 발견: input[type='password']")
+            except:
+                # 폴백: 다른 셀렉터 시도
+                pw_selectors = [
+                    (By.XPATH, "//input[@type='password']"),
+                    (By.NAME, "password"),
+                    (By.ID, "password"),
+                ]
+                pw_field = None
+                for selector_type, selector_value in pw_selectors:
+                    try:
+                        pw_field = self.driver.find_element(selector_type, selector_value)
+                        print(f"✓ 비밀번호 필드 발견: {selector_type} = {selector_value}")
+                        break
+                    except:
+                        continue
             
             if not pw_field:
                 print("✗ 비밀번호 입력 필드를 찾을 수 없습니다.")
@@ -152,27 +152,26 @@ class ContractComparator:
             pw_field.send_keys(password)
             print("✓ 비밀번호 입력 완료")
             
-            # 다양한 로그인 버튼 셀렉터 시도
-            login_button_selectors = [
-                (By.XPATH, "//button[@type='submit']"),
-                (By.XPATH, "//input[@type='submit']"),
-                (By.XPATH, "//button[contains(text(), '로그인')]"),
-                (By.XPATH, "//button[contains(text(), 'Login')]"),
-                (By.XPATH, "//button[contains(text(), 'Sign in')]"),
-                (By.CSS_SELECTOR, "button[type='submit']"),
-                (By.CSS_SELECTOR, "input[type='submit']"),
-                (By.CLASS_NAME, "login-btn"),
-                (By.CLASS_NAME, "submit-btn")
-            ]
-            
-            login_button = None
-            for selector_type, selector_value in login_button_selectors:
-                try:
-                    login_button = self.driver.find_element(selector_type, selector_value)
-                    print(f"✓ 로그인 버튼 발견: {selector_type} = {selector_value}")
-                    break
-                except:
-                    continue
+            # 로그인 버튼 (k6 성능 측정에서 확인된 셀렉터 우선 사용)
+            try:
+                login_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+                print("✓ 로그인 버튼 발견: button[type='submit']")
+            except:
+                # 폴백: 다른 셀렉터 시도
+                login_button_selectors = [
+                    (By.XPATH, "//button[@type='submit']"),
+                    (By.XPATH, "//input[@type='submit']"),
+                    (By.CSS_SELECTOR, "input[type='submit']"),
+                    (By.XPATH, "//button[contains(text(), '로그인')]"),
+                ]
+                login_button = None
+                for selector_type, selector_value in login_button_selectors:
+                    try:
+                        login_button = self.driver.find_element(selector_type, selector_value)
+                        print(f"✓ 로그인 버튼 발견: {selector_type} = {selector_value}")
+                        break
+                    except:
+                        continue
             
             if not login_button:
                 print("✗ 로그인 버튼을 찾을 수 없습니다.")
@@ -182,8 +181,8 @@ class ContractComparator:
             login_button.click()
             print("✓ 로그인 버튼 클릭 완료")
             
-            # 로그인 성공 확인 (다양한 방법으로 시도)
-            time.sleep(3)
+            # 로그인 성공 확인 (대기 시간 최소화)
+            time.sleep(2)  # 3초 -> 2초로 단축
             
             # URL 변경 확인
             current_url = self.driver.current_url
@@ -439,27 +438,43 @@ class ContractComparator:
                             
                             # 특별 처리
                             if field_name == '계약 분류':
-                                # "[중분류명](대분류명 > [중분류명])" 형태 파싱
-                                # 괄호 안의 경로를 추출
+                                # 계약 분류 파싱 개선
+                                # 예: "[중분류명](대분류명 > [중분류명])" 또는 "대분류명 > 중분류명"
+                                print(f"      계약 분류 원본: {value}")
                                 
-                                # 괄호 안의 내용 추출: (대분류명 > [중분류명])
+                                # 1. 괄호 안의 내용 추출 시도
                                 bracket_match = re.search(r'\((.*?)\)', value)
                                 if bracket_match:
-                                    bracket_content = bracket_match.group(1)  # "대분류명 > [중분류명]"
+                                    bracket_content = bracket_match.group(1).strip()  # "대분류명 > [중분류명]"
+                                    print(f"      괄호 내용: {bracket_content}")
                                     
-                                    # " > "로 분리
+                                    # 중괄호 제거
+                                    bracket_content = bracket_content.replace('[', '').replace(']', '').strip()
+                                    
+                                    # ">" 또는 " > "로 분리 시도
                                     if '>' in bracket_content:
-                                        parts = bracket_content.split('>')
+                                        parts = re.split(r'\s*>\s*', bracket_content, 1)
                                         data['계약분류_대분류'] = parts[0].strip()
                                         data['계약분류_중분류'] = parts[1].strip() if len(parts) > 1 else ''
                                     else:
                                         # 괄호는 있지만 > 없는 경우
                                         data['계약분류_대분류'] = bracket_content.strip()
                                         data['계약분류_중분류'] = ''
+                                
+                                # 2. 괄호 없이 ">" 로 구분된 경우
+                                elif '>' in value:
+                                    value_clean = value.replace('[', '').replace(']', '').replace('(', '').replace(')', '').strip()
+                                    parts = re.split(r'\s*>\s*', value_clean, 1)
+                                    data['계약분류_대분류'] = parts[0].strip()
+                                    data['계약분류_중분류'] = parts[1].strip() if len(parts) > 1 else ''
+                                
+                                # 3. 그 외의 경우
                                 else:
-                                    # 괄호가 없는 경우 원본 그대로 사용
-                                    data['계약분류_대분류'] = value
+                                    value_clean = value.replace('[', '').replace(']', '').replace('(', '').replace(')', '').strip()
+                                    data['계약분류_대분류'] = value_clean
                                     data['계약분류_중분류'] = ''
+                                
+                                print(f"      파싱 결과 - 대분류: {data.get('계약분류_대분류')}, 중분류: {data.get('계약분류_중분류')}")
                             
                             elif field_name == '요청자' and '?' in value:
                                 # "팀 ? 이름" 형태 파싱
@@ -517,6 +532,92 @@ class ContractComparator:
         
         return data
     
+    def _parse_contract_info_special(self, data):
+        """추출된 계약 정보에서 특별 파싱 수행"""
+        parsed = {}
+        
+        # 계약 분류 파싱
+        if '계약 분류' in data and data['계약 분류']:
+            value = data['계약 분류']
+            print(f"      계약 분류 원본: {value}")
+            
+            # 괄호 안의 내용 추출 시도
+            bracket_match = re.search(r'\((.*?)\)', value)
+            if bracket_match:
+                bracket_content = bracket_match.group(1).strip()
+                bracket_content = bracket_content.replace('[', '').replace(']', '').strip()
+                
+                if '>' in bracket_content:
+                    parts = re.split(r'\s*>\s*', bracket_content, 1)
+                    parsed['계약분류_대분류'] = parts[0].strip()
+                    parsed['계약분류_중분류'] = parts[1].strip() if len(parts) > 1 else ''
+                else:
+                    parsed['계약분류_대분류'] = bracket_content.strip()
+                    parsed['계약분류_중분류'] = ''
+            elif '>' in value:
+                value_clean = value.replace('[', '').replace(']', '').replace('(', '').replace(')', '').strip()
+                parts = re.split(r'\s*>\s*', value_clean, 1)
+                parsed['계약분류_대분류'] = parts[0].strip()
+                parsed['계약분류_중분류'] = parts[1].strip() if len(parts) > 1 else ''
+            else:
+                parsed['계약분류_대분류'] = value
+                parsed['계약분류_중분류'] = ''
+            
+            print(f"      파싱 결과 - 대분류: {parsed.get('계약분류_대분류')}, 중분류: {parsed.get('계약분류_중분류')}")
+        
+        # 요청자 파싱
+        if '요청자' in data and data['요청자']:
+            value = data['요청자']
+            if '/' in value:
+                parts = value.split('/')
+                if len(parts) >= 2:
+                    parsed['요청자_팀'] = parts[0].strip()
+                    parsed['요청자_이름'] = parts[-1].strip()
+        
+        # 계약 기간 파싱
+        if '계약 기간' in data and data['계약 기간']:
+            value = data['계약 기간']
+            if '~' in value:
+                parts = value.split('~')
+                parsed['계약기간_시작일'] = parts[0].strip()
+                parsed['계약기간_종료일'] = parts[1].strip() if len(parts) > 1 else ''
+        
+        # 계약 자동 연장 여부
+        if '계약 자동 연장 여부' in data and data['계약 자동 연장 여부']:
+            value = data['계약 자동 연장 여부']
+            if value.upper() in ['YES', '예', 'Y']:
+                parsed['자동연장_여부'] = 'Yes'
+            else:
+                parsed['자동연장_여부'] = 'No'
+        
+        return parsed
+    
+    def _parse_detail_info_special(self, data):
+        """추출된 상세 정보에서 특별 파싱 수행"""
+        parsed = {}
+        
+        # 계약 체결일
+        if '계약 체결일' in data:
+            parsed['계약체결일'] = data['계약 체결일']
+        
+        # 계약 규모
+        if '계약 규모' in data:
+            parsed['계약규모'] = data['계약 규모']
+        
+        # 지급 상세
+        if '지급 상세' in data:
+            parsed['지급상세'] = data['지급 상세']
+        
+        # 계약 배경/목적
+        if '계약 배경/목적' in data:
+            parsed['계약배경_목적'] = data['계약 배경/목적']
+        
+        # 주요 협의사항
+        if '주요 협의사항' in data:
+            parsed['주요협의사항'] = data['주요 협의사항']
+        
+        return parsed
+    
     def extract_contract_details(self, contract):
         """개별 계약서 상세 내용 추출 (재시도 로직 포함, 불필요한 텍스트 제거)"""
         if not contract.get('link'):
@@ -537,39 +638,134 @@ class ContractComparator:
                 # 페이지 로딩 대기
                 wait = WebDriverWait(self.driver, 30)
                 wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-                time.sleep(2)
+                
+                # 테이블이 로드될 때까지 대기 (최대 10초)
+                for i in range(10):
+                    time.sleep(1)
+                    all_tables = self.driver.find_elements(By.TAG_NAME, "table")
+                    if len(all_tables) > 0:
+                        print(f"    → 테이블 로딩 완료: {len(all_tables)}개 (대기 {i+1}초)")
+                        break
+                    if i >= 4:  # 5초 후에도 없으면 조건부 대기
+                        # 다른 데이터 구조 확인
+                        main_exists = len(self.driver.find_elements(By.TAG_NAME, "main")) > 0
+                        if main_exists:
+                            break
+                
+                # 최종 테이블 개수 확인
+                all_tables = self.driver.find_elements(By.TAG_NAME, "table")
+                print(f"    → 페이지에서 {len(all_tables)}개의 테이블 발견")
                 
                 details = {}
                 
-                # 계약 정보 영역 추출 (정확한 XPath)
+                # 계약 정보 영역 추출 (테이블에서 직접 데이터 추출)
                 try:
-                    contract_xpath = "/html/body/div/div[1]/div[3]/div[2]/main/main/div/div[2]/div[2]/div[1]/div[1]/div[2]"
-                    contract_element = self.driver.find_element(By.XPATH, contract_xpath)
-                    contract_info_text = contract_element.text.strip()
+                    # 계약 정보 테이블 찾기 (첫 번째 테이블)
+                    contract_table = None
                     
-                    if contract_info_text:
-                        print(f"    ✓ 계약 정보 영역 발견: {len(contract_info_text)}자")
-                        details.update(self._parse_contract_info(contract_info_text))
+                    # 방법 1: 첫 번째 테이블
+                    if len(all_tables) >= 1:
+                        contract_table = all_tables[0]  # 인덱스 0 = 첫 번째 테이블
+                        print(f"    ✓ 계약 정보 테이블 발견: 첫 번째 테이블 ({len(all_tables)}개 중)")
                     else:
-                        print(f"    ⚠ 계약 정보 영역이 비어있습니다.")
+                        # 방법 2: XPath로 시도
+                        contract_xpaths = [
+                            "//table[position()=1]",  # 첫 번째 테이블
+                            "//table[contains(@class, 'border-spacing-0')]",  # 클래스 기반
+                            "/html/body/div/div[1]/div[3]/div[2]/main/div/div[2]/div[2]/div[1]/div[1]/div[2]/table",  # 절대 경로
+                            "//main//table[1]",  # 첫 번째 main의 첫 번째 테이블
+                            "//div[contains(@class, '계약 정보')]//table",
+                        ]
+                        
+                        for xpath in contract_xpaths:
+                            try:
+                                contract_table = self.driver.find_element(By.XPATH, xpath)
+                                print(f"    ✓ 계약 정보 테이블 발견: {xpath[:80]}")
+                                break
+                            except:
+                                continue
+                    
+                    if contract_table:
+                        # 테이블의 각 행을 순회하면서 Key-Value 추출
+                        rows = contract_table.find_elements(By.XPATH, ".//tr")
+                        print(f"    → {len(rows)}개 행 발견")
+                        
+                        for row in rows:
+                            cells = row.find_elements(By.XPATH, ".//td | .//th")
+                            if len(cells) >= 2:
+                                key = cells[0].text.strip()
+                                value = cells[1].text.strip()
+                                # key가 있고, value가 있거나 빈 문자열도 허용
+                                if key:
+                                    details[key] = value
+                                    if value:
+                                        print(f"      - {key}: {value[:50]}")
+                                    else:
+                                        print(f"      - {key}: (빈 값)")
+                        
+                        # 특별 파싱 적용
+                        details.update(self._parse_contract_info_special(details))
+                    else:
+                        print("    ⚠ 계약 정보 테이블을 찾을 수 없습니다.")
                         
                 except Exception as e:
                     print(f"    ⚠ 계약 정보 영역 찾기 실패: {str(e)[:100]}")
+                    import traceback
+                    traceback.print_exc()
                 
-                # 상세 정보 영역 추출 (정확한 XPath)
+                # 상세 정보 영역 추출 (테이블에서 직접 데이터 추출)
                 try:
-                    detail_xpath = "/html/body/div/div[1]/div[3]/div[2]/main/main/div/div[2]/div[2]/div[1]/div[2]"
-                    detail_element = self.driver.find_element(By.XPATH, detail_xpath)
-                    detail_info_text = detail_element.text.strip()
+                    # 상세 정보 테이블 찾기 (두 번째 테이블)
+                    detail_table = None
                     
-                    if detail_info_text:
-                        print(f"    ✓ 상세 정보 영역 발견: {len(detail_info_text)}자")
-                        details.update(self._parse_detail_info(detail_info_text))
+                    # 방법 1: 두 번째 테이블 (position 기반)
+                    if len(all_tables) >= 2:
+                        detail_table = all_tables[1]  # 인덱스 1 = 두 번째 테이블
+                        print(f"    ✓ 상세 정보 테이블 발견: 두 번째 테이블 ({len(all_tables)}개 중)")
                     else:
-                        print(f"    ⚠ 상세 정보 영역이 비어있습니다.")
+                        # 방법 2: XPath로 시도
+                        detail_xpaths = [
+                            "//table[position()=2]",  # 두 번째 테이블
+                            "//table[contains(@class, 'w-full')]",  # 클래스 기반
+                            "/html/body/div/div[1]/div[3]/div[2]/main/div/div[2]/div[2]/div[1]/div[2]/div[2]/table",  # 절대 경로
+                            "//main//table[2]",  # 첫 번째 main의 두 번째 테이블
+                        ]
+                        
+                        for xpath in detail_xpaths:
+                            try:
+                                detail_table = self.driver.find_element(By.XPATH, xpath)
+                                print(f"    ✓ 상세 정보 테이블 발견: {xpath[:80]}")
+                                break
+                            except:
+                                continue
+                    
+                    if detail_table:
+                        # 테이블의 각 행을 순회하면서 Key-Value 추출
+                        rows = detail_table.find_elements(By.XPATH, ".//tr")
+                        print(f"    → {len(rows)}개 행 발견")
+                        
+                        for row in rows:
+                            cells = row.find_elements(By.XPATH, ".//td | .//th")
+                            if len(cells) >= 2:
+                                key = cells[0].text.strip()
+                                value = cells[1].text.strip()
+                                # key가 있고, value가 있거나 빈 문자열도 허용
+                                if key:
+                                    details[key] = value
+                                    if value:
+                                        print(f"      - {key}: {value[:50]}")
+                                    else:
+                                        print(f"      - {key}: (빈 값)")
+                        
+                        # 특별 파싱 적용
+                        details.update(self._parse_detail_info_special(details))
+                    else:
+                        print("    ⚠ 상세 정보 테이블을 찾을 수 없습니다.")
                         
                 except Exception as e:
                     print(f"    ⚠ 상세 정보 영역 찾기 실패: {str(e)[:100]}")
+                    import traceback
+                    traceback.print_exc()
                 
                 # 페이지로 돌아가기
                 self.driver.back()
