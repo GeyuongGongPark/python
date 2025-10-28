@@ -11,8 +11,15 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 from datetime import datetime
+from dotenv import load_dotenv
 
-from base_url import BASE_URL
+# .env 파일 로드
+load_dotenv()
+
+# 환경변수 가져오기 (줄 시작부터 공백 없이 매칭)
+BASE_URL = {
+    'PRODUCTION': os.getenv('prod_BASE_URL', '').strip() or os.getenv('dev_BASE_URL', '').strip(),
+}
 
 class ContractComparator:
     def __init__(self):
@@ -41,7 +48,7 @@ class ContractComparator:
         """웹사이트 로그인"""
         try:
             print("로그인 시도 중...")
-            self.driver.get("https://harim.business.lawform.io")
+            self.driver.get(BASE_URL['PRODUCTION'])
             
             # 페이지 로딩 대기
             time.sleep(3)
@@ -198,7 +205,7 @@ class ContractComparator:
         """체결 계약서 조회 메뉴로 이동"""
         try:
             print("체결 계약서 조회 페이지로 이동 중...")
-            contract_url = BASE_URL.PRODUCTION + "/clm/complete?page=0"
+            contract_url = BASE_URL['PRODUCTION'] + "/clm/complete?page=0"
             print(f"URL: {contract_url}")
             
             self.driver.get(contract_url)
@@ -294,7 +301,7 @@ class ContractComparator:
                 print(f"\n--- page={page_num} 추출 중 ---")
                 
                 # 현재 페이지 URL
-                current_url = f"{BASE_URL.PRODUCTION}/clm/complete?page={page_num}"
+                current_url = f"{BASE_URL['PRODUCTION']}/clm/complete?page={page_num}"
                 self.driver.get(current_url)
                 time.sleep(3)
                 
@@ -650,7 +657,7 @@ class ContractComparator:
                 print(f"--- page={page_num} 처리 중 ---")
                 
                 # 현재 페이지 URL로 이동
-                current_url = f"{BASE_URL.PRODUCTION}/clm/complete?page={page_num}"
+                current_url = f"{BASE_URL['PRODUCTION']}/clm/complete?page={page_num}"
                 self.driver.get(current_url)
                 time.sleep(3)
                 
@@ -749,9 +756,17 @@ class ContractComparator:
 
 def main():
     """메인 함수"""
-    # 설정
-    username = "developer+id20251002103114449_m@amicuslex.net"
-    password = "1q2w#E$R"
+    # 설정 - .env 파일에서 환경변수 읽기
+    username = os.getenv('prod_ID', '').strip() or os.getenv('dev_ID', '').strip()
+    password = os.getenv('prod_PW', '').strip() or os.getenv('dev_PW', '').strip()
+    
+    # 따옴표 제거 (예: "1q2w#E$R" -> 1q2w#E$R)
+    password = password.strip('"').strip("'")
+    
+    print(f"환경변수 확인:")
+    print(f"  - BASE_URL: {BASE_URL.get('PRODUCTION', '설정되지 않음')}")
+    print(f"  - Username: {username}")
+    print(f"  - Password: {'설정됨' if password else '설정되지 않음'}")
     
     # 추출기 생성 및 실행
     comparator = ContractComparator()
