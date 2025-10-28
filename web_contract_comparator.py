@@ -920,11 +920,17 @@ class ContractComparator:
                             contract.update(details)
                             
                             # 추출 성공 여부 확인
-                            if details.get('content') and '추출 실패' not in details.get('content', ''):
-                                print(f"  ✓ 상세 정보 추출 완료")
-                                success_count += 1
+                            # 'content' 키가 없거나, 'content'에 '추출 실패'가 없으면 성공
+                            if 'content' not in details or '추출 실패' not in details.get('content', ''):
+                                # 데이터가 있는지 확인 (빈 딕셔너리가 아닌지)
+                                if len(details) > 0:
+                                    print(f"  ✓ 상세 정보 추출 완료")
+                                    success_count += 1
+                                else:
+                                    print(f"  ⚠ 데이터가 비어있음 (계속 진행)")
+                                    fail_count += 1
                             else:
-                                print(f"  ⚠ 추출 실패 (계속 진행)")
+                                print(f"  ⚠ 추출 실패: {details.get('content', '')[:50]} (계속 진행)")
                                 fail_count += 1
                         except Exception as e:
                             print(f"  ✗ 예상치 못한 오류: {str(e)[:100]}")
