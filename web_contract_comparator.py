@@ -618,6 +618,106 @@ class ContractComparator:
         
         return parsed
     
+    def _extract_table_key_values(self, table_element):
+        """테이블에서 각 행의 th → td 1:1 매핑으로 키-값을 안전 추출"""
+        result = {}
+        try:
+            rows = table_element.find_elements(By.XPATH, ".//tr")
+            for row in rows:
+                try:
+                    th_elements = row.find_elements(By.XPATH, ".//th")
+                    td_elements = row.find_elements(By.XPATH, ".//td")
+                    if len(th_elements) >= 1 and len(td_elements) >= 1:
+                        key = th_elements[0].text.strip()
+                        value = td_elements[0].text.strip()
+                        if key:
+                            result[key] = value
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return result
+    
+    def _map_to_template_format(self, data):
+        """추출된 데이터를 양식 파일 구조에 맞게 매핑"""
+        if not data:
+            return {}
+        
+        mapped = {}
+        
+        # 관리 번호
+        mapped['관리 번호'] = data.get('관리번호', '')
+        
+        # 계약명
+        mapped['계약명 '] = data.get('계약명', '')
+        
+        # 대분류, 분류 (계약 분류 파싱 결과)
+        mapped['대분류'] = data.get('계약분류_대분류', '')
+        mapped['분류'] = data.get('계약분류_중분류', '')
+        
+        # 계약 시작일, 계약 완료일
+        mapped['계약 시작일'] = data.get('계약기간_시작일', '')
+        mapped['계약 완료일'] = data.get('계약기간_종료일', '')
+        
+        # 상대 계약자
+        mapped['상대 계약자'] = data.get('상대 계약자 정보', '')
+        
+        # 원본 보관 위치
+        mapped['원본 보관 위치'] = data.get('원본 보관 위치', '')
+        
+        # 보안여부
+        mapped['보안여부'] = data.get('보안여부', '')
+        
+        # 연관계약
+        mapped['연관계약'] = data.get('연관 계약', '')
+        
+        # 계약 규모 (계약 규모 파싱)
+        if '계약 규모' in data:
+            # "10,000,000 / KRW 한국 / 부가세(10%) 별도" 형태 파싱
+            value = data['계약 규모']
+            parts = value.split(' / ')
+            if len(parts) >= 2:
+                mapped['계약 규모'] = parts[0].strip()
+                mapped['통화'] = parts[1].strip()
+                if len(parts) > 2:
+                    mapped['계약규모 코멘트'] = parts[2].strip()
+            else:
+                mapped['계약 규모'] = value
+        else:
+            mapped['계약 규모'] = ''
+            mapped['통화'] = ''
+        
+        # 주요 협의사항
+        mapped['주요 협의사항'] = data.get('주요 협의사항', '')
+        mapped['주요 협의사항_원본'] = data.get('주요 협의사항', '')
+        
+        # 계약의 배경 및 목적
+        mapped['계약의 배경 및 목적'] = data.get('계약 배경/목적', '')
+        mapped['계약의 배경 및 목적_원본'] = data.get('계약 배경/목적', '')
+        
+        # 계약 체결일
+        mapped['계약 체결일'] = data.get('계약 체결일', '')
+        
+        # 자동 연장 여부
+        mapped['자동 연장 여부'] = data.get('계약 자동 연장 여부', '')
+        if '자동연장_여부' in data:
+            mapped['자동 연장 여부'] = data.get('자동연장_여부', mapped['자동 연장 여부'])
+        
+        # 자동연장 코멘트
+        mapped['통지(코멘트)'] = data.get('자동연장_코멘트', '')
+        
+        # 요청자 정보 (검토 요청자로 매핑)
+        if '요청자_팀' in data or '요청자_이름' in data:
+            mapped['검토 요청자 이름'] = data.get('요청자_이름', '')
+        
+        # 연관 문서 (첨부/별첨)
+        mapped['관련문서'] = data.get('첨부/별첨', '')
+        
+        # 체결계약서 사본
+        mapped['계약서 첨부 파일'] = data.get('체결 계약서 사본', '')
+        
+        return mapped
+    
     def extract_contract_details(self, contract):
         """개별 계약서 상세 내용 추출 (재시도 로직 포함, 불필요한 텍스트 제거)"""
         if not contract.get('link'):
@@ -686,23 +786,10 @@ class ContractComparator:
                                 continue
                     
                     if contract_table:
-                        # 테이블의 각 행을 순회하면서 Key-Value 추출
-                        rows = contract_table.find_elements(By.XPATH, ".//tr")
-                        print(f"    → {len(rows)}개 행 발견")
-                        
-                        for row in rows:
-                            cells = row.find_elements(By.XPATH, ".//td | .//th")
-                            if len(cells) >= 2:
-                                key = cells[0].text.strip()
-                                value = cells[1].text.strip()
-                                # key가 있고, value가 있거나 빈 문자열도 허용
-                                if key:
-                                    details[key] = value
-                                    if value:
-                                        print(f"      - {key}: {value[:50]}")
-                                    else:
-                                        print(f"      - {key}: (빈 값)")
-                        
+                        # 테이블의 각 행을 순회하면서 Key-Value 추출 (th→td 1:1)
+                        kv = self._extract_table_key_values(contract_table)
+                        print(f"    → {len(kv)}개 항목 추출")
+                        details.update(kv)
                         # 특별 파싱 적용
                         details.update(self._parse_contract_info_special(details))
                     else:
@@ -740,23 +827,10 @@ class ContractComparator:
                                 continue
                     
                     if detail_table:
-                        # 테이블의 각 행을 순회하면서 Key-Value 추출
-                        rows = detail_table.find_elements(By.XPATH, ".//tr")
-                        print(f"    → {len(rows)}개 행 발견")
-                        
-                        for row in rows:
-                            cells = row.find_elements(By.XPATH, ".//td | .//th")
-                            if len(cells) >= 2:
-                                key = cells[0].text.strip()
-                                value = cells[1].text.strip()
-                                # key가 있고, value가 있거나 빈 문자열도 허용
-                                if key:
-                                    details[key] = value
-                                    if value:
-                                        print(f"      - {key}: {value[:50]}")
-                                    else:
-                                        print(f"      - {key}: (빈 값)")
-                        
+                        # 테이블의 각 행을 순회하면서 Key-Value 추출 (th→td 1:1)
+                        kv = self._extract_table_key_values(detail_table)
+                        print(f"    → {len(kv)}개 항목 추출")
+                        details.update(kv)
                         # 특별 파싱 적용
                         details.update(self._parse_detail_info_special(details))
                     else:
@@ -770,6 +844,32 @@ class ContractComparator:
                 # 페이지로 돌아가기
                 self.driver.back()
                 time.sleep(2)
+                
+                # 양식 파일 구조에 맞게 매핑 (계약명 안전 보정 포함)
+                # 계약명 보정: '요청자' 등 잘못 들어가는 경우 방지
+                if '계약명' in details and details.get('계약명'):
+                    title_val = details['계약명']
+                    # 비정상 패턴 필터링
+                    suspicious_keywords = ['요청자', '검토 요청', '참조', '수신자']
+                    if any(kw in title_val for kw in suspicious_keywords):
+                        # 대안: 페이지 타이틀 혹은 링크 텍스트 재시도
+                        try:
+                            h_candidates = self.driver.find_elements(By.XPATH, "//main//h1 | //main//h2 | //h1 | //h2")
+                            for h in h_candidates:
+                                txt = h.text.strip()
+                                if txt and not any(kw in txt for kw in suspicious_keywords):
+                                    details['계약명'] = txt
+                                    break
+                        except Exception:
+                            pass
+                
+                mapped_details = self._map_to_template_format(details)
+                
+                # 원본 데이터를 _original에 저장하고 매핑된 데이터를 추가
+                if details:
+                    original_data = {k: v for k, v in details.items()}
+                    details.update(mapped_details)
+                    details['_original_data'] = original_data
                 
                 return details
                 
@@ -835,16 +935,27 @@ class ContractComparator:
                 else:
                     print(f"✓ CSV 파일 추가 저장: {csv_filename} ({len(self.contract_data)}개)")
             
-            # Excel 저장 (항상 덮어쓰기)
-            excel_filename = f"contract_data_{timestamp}.xlsx"
-            if self.contract_data:
+            # Excel 저장 - 템플릿 컬럼 구조에 맞춰 적재
+            template_path = "데이터 추출 양식.xlsx"
+            template_excel_filename = f"데이터 추출 결과_{timestamp}.xlsx"
+            try:
+                # 템플릿 컬럼 로드
+                template_df = pd.read_excel(template_path)
+                template_cols = list(template_df.columns)
+                # 템플릿 컬럼 기준으로 행 구성
+                rows = []
+                for contract in self.contract_data:
+                    row = {col: contract.get(col, '') for col in template_cols}
+                    rows.append(row)
+                out_df = pd.DataFrame(rows, columns=template_cols)
+                out_df.to_excel(template_excel_filename, index=False, engine='openpyxl')
+                print(f"✓ 템플릿 기반 Excel 저장: {template_excel_filename} ({len(self.contract_data)}개)")
+            except Exception as e:
+                # 템플릿 저장 실패 시 일반 저장으로 폴백
+                excel_filename = f"contract_data_{timestamp}.xlsx"
                 df = pd.DataFrame(self.contract_data)
                 df.to_excel(excel_filename, index=False, engine='openpyxl')
-                
-                if mode == 'w':
-                    print(f"✓ Excel 파일 저장: {excel_filename}")
-                else:
-                    print(f"✓ Excel 파일 업데이트: {excel_filename} ({len(self.contract_data)}개)")
+                print(f"⚠ 템플릿 저장 실패로 일반 Excel 저장: {excel_filename} - {e}")
             
             return True
             
