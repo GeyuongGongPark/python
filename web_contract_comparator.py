@@ -11,14 +11,43 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 from datetime import datetime
-from dotenv import load_dotenv
 
-# .env 파일 로드
-load_dotenv()
+def parse_custom_env():
+    """.env 파일을 직접 파싱 (KEY : VALUE 형식 지원)"""
+    env_vars = {}
+    
+    try:
+        # .env 파일 읽기
+        with open('.env', 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                
+                # 주석이나 빈 줄 무시
+                if not line or line.startswith('#'):
+                    continue
+                
+                # KEY : VALUE 형식 파싱
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # 따옴표 제거
+                    value = value.strip('"').strip("'")
+                    
+                    env_vars[key] = value
+                    
+        return env_vars
+    except Exception as e:
+        print(f"⚠ .env 파일 읽기 실패: {e}")
+        return {}
+
+# .env 파일 파싱
+env_vars = parse_custom_env()
 
 # 환경변수 가져오기 (줄 시작부터 공백 없이 매칭)
 BASE_URL = {
-    'PRODUCTION': os.getenv('prod_BASE_URL', '').strip() or os.getenv('dev_BASE_URL', '').strip(),
+    'PRODUCTION': env_vars.get('prod_BASE_URL', '').strip() or env_vars.get('dev_BASE_URL', '').strip(),
 }
 
 class ContractComparator:
@@ -757,16 +786,13 @@ class ContractComparator:
 def main():
     """메인 함수"""
     # 설정 - .env 파일에서 환경변수 읽기
-    username = os.getenv('prod_ID', '').strip() or os.getenv('dev_ID', '').strip()
-    password = os.getenv('prod_PW', '').strip() or os.getenv('dev_PW', '').strip()
+    username = env_vars.get('prod_ID', '').strip() or env_vars.get('dev_ID', '').strip()
+    password = env_vars.get('prod_PW', '').strip() or env_vars.get('dev_PW', '').strip()
     
-    # 따옴표 제거 (예: "1q2w#E$R" -> 1q2w#E$R)
-    password = password.strip('"').strip("'")
-    
-    print(f"환경변수 확인:")
+    print(f"\n환경변수 확인:")
     print(f"  - BASE_URL: {BASE_URL.get('PRODUCTION', '설정되지 않음')}")
     print(f"  - Username: {username}")
-    print(f"  - Password: {'설정됨' if password else '설정되지 않음'}")
+    print(f"  - Password: {'설정됨' if password else '설정되지 않음'}\n")
     
     # 추출기 생성 및 실행
     comparator = ContractComparator()
