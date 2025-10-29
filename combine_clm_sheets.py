@@ -160,17 +160,14 @@ def consolidate_by_no(input_excel: Path, output_excel: Path) -> None:
                     new_col = f"{col}.{i}"
                 prefixed = prefixed.rename(columns={col: new_col})
 
-        # Left join on NO.
+        # Left join: 오른쪽 키를 인덱스로 사용해 왼쪽 키 컬럼이 _x로 바뀌지 않도록 한다
+        prefixed_indexed = prefixed.set_index(target_key)
         merged = merged.merge(
-            prefixed,
+            prefixed_indexed,
             left_on=base_key,
-            right_on=target_key,
+            right_index=True,
             how="left",
-            suffixes=("", ""),
         )
-        # 오른쪽 키 컬럼 제거(유지 필요 없으므로)
-        if target_key in merged.columns:
-            merged = merged.drop(columns=[target_key])
 
     # 저장
     with pd.ExcelWriter(output_excel, engine="openpyxl") as writer:
