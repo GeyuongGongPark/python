@@ -1,3 +1,20 @@
+"""CLM 원본 엑셀을 읽어 가공된 결과를 생성하는 유틸리티.
+
+개요
+- 입력: 원본 Excel (시트: CLM등록, CLM카테고리, 상대계약자, 인적정보등록, CLM계약처첨부파일)
+- 처리:
+  1) CLM등록 시트 복제(안전한 작업용 사본)
+  2) 카테고리 코드(대분류/분류)를 이름으로 매핑하여 우측에 보조 컬럼 추가
+  3) 상대계약자 시트에 인적정보등록 시트를 매핑(인적정보  NO. 우측에 인적정보.* 컬럼 추가)
+  4) 매핑된 인적정보를 CLM등록의 계약 시작일 좌측에 집계/삽입(콤마 결합 또는 explode)
+  5) 첨부파일 정보를 CLM등록 최우측에 요약 컬럼으로 추가
+- 출력: 처리된 CLM등록만 포함된 새 Excel 파일
+
+사용 예시
+    python clm_process.py "/path/to/input.xlsx" [--explode]
+    # --explode: 동일 CLM  NO.의 다중 인적정보  NO.를 행 확장으로 출력
+"""
+
 import sys
 from pathlib import Path
 from typing import List, Optional

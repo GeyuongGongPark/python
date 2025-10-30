@@ -1,3 +1,23 @@
+"""CLM 다중 시트 병합 도구.
+
+개요
+- 입력: 개별/다중 Excel 파일(디렉터리 지정 시 내부 *.xlsx 일괄 처리)
+- 처리:
+  1) 모든 시트를 헤더 없이 로드한 뒤 B2를 헤더로 재구성
+  2) 베이스 시트(예: CLM등록)를 기준으로 기타 시트의 컬럼을 프리픽스 붙여 병합
+  3) 특수 시트 처리(예: 첨부파일 → 파일명만 키 기준으로 콤마 결합)
+  4) 인적정보등록에서 기업명(법인명) 매핑하여 상대계약자에 요약 컬럼 추가
+  5) 충돌/중복 열 이름 정리 후 결과 저장
+- 출력: "통합" 시트를 가진 결과 워크북(파일명 규칙에 따라 done 폴더에 저장)
+
+사용 예시
+    # 디렉터리 내 모든 .xlsx 처리
+    python combine_clm_sheets.py /path/to/folder
+
+    # 단일 파일 처리
+    python combine_clm_sheets.py /path/to/file.xlsx
+"""
+
 import sys
 import re
 from pathlib import Path

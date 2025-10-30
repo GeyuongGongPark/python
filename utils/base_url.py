@@ -1,3 +1,10 @@
+"""환경설정(.env)에서 BASE_URL을 로드해 서비스별 엔드포인트를 구성하는 모듈.
+
+용도
+- .env의 prod_BASE_URL/dev_BASE_URL 값을 읽어 기본 URL 결정
+- 로그인/CLM/대량생성/SEAL/자문/송무/법령/프로젝트/설정 등 페이지별 경로 상수 제공
+"""
+
 import os
 
 def parse_custom_env():

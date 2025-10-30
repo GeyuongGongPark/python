@@ -1,3 +1,15 @@
+"""Excel의 모든 시트를 데이터(JSON)로 직렬화하는 스크립트.
+
+개요
+- 입력: Excel 파일 1개
+- 처리: 각 시트를 B2 기준으로 헤더 재구성 후 행 단위 딕셔너리 리스트로 변환
+- 출력: {"시트명": [{col: value, ...}, ...]} 형태의 JSON 파일
+
+사용 예시
+    python extract_sheets_to_json.py /path/to/input.xlsx
+    python extract_sheets_to_json.py /path/to/input.xlsx /path/to/output.json
+"""
+
 import sys
 import json
 from pathlib import Path

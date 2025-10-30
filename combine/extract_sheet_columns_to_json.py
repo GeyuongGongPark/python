@@ -1,3 +1,15 @@
+"""Excel의 각 시트 컬럼만 추출해 JSON으로 저장하는 스크립트.
+
+개요
+- 입력: Excel 파일 1개
+- 처리: 각 시트를 B2 기준으로 헤더 재구성 후 컬럼명만 수집
+- 출력: {"시트명": ["컬럼1", ...]} 형태의 JSON 파일
+
+사용 예시
+    python extract_sheet_columns_to_json.py /path/to/input.xlsx
+    python extract_sheet_columns_to_json.py /path/to/input.xlsx /path/to/output.json
+"""
+
 import sys
 import json
 from pathlib import Path
