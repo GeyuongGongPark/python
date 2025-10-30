@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# CLM 시트 통합 실행 스크립트
+# Excel 시트별 컬럼값을 JSON으로 추출하는 스크립트
 # 사용법:
-#   ./run_combine_clm_sheets.sh [엑셀파일경로]
+#   ./run_extract_sheets_to_json.sh [엑셀파일경로] [출력JSON경로]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -21,20 +21,18 @@ fi
 
 # 파일 경로 확인
 if [ $# -eq 0 ]; then
-    # 인자가 없으면 현재 디렉토리에서 .xlsx 파일 자동 탐색 (이름에 CLM 포함 우선)
-    EXCEL_FILE=$(ls -1 *.xlsx 2>/dev/null | grep -i "clm 이관_하림" | head -n 1)
-    if [ -z "$EXCEL_FILE" ]; then
-        EXCEL_FILE=$(ls -1 *.xlsx 2>/dev/null | head -n 1)
-    fi
+    # 인자가 없으면 현재 디렉토리에서 .xlsx 파일 자동 탐색
+    EXCEL_FILE=$(ls -1 *.xlsx 2>/dev/null | head -n 1)
 
     if [ -z "$EXCEL_FILE" ]; then
         echo "📁 현재 디렉토리에서 엑셀 파일(.xlsx)을 찾을 수 없습니다."
         echo ""
         echo "사용법:"
-        echo "  ./run_combine_clm_sheets.sh [엑셀파일경로]"
+        echo "  ./run_extract_sheets_to_json.sh [엑셀파일경로] [출력JSON경로]"
         echo ""
         echo "예시:"
-        echo "  ./run_combine_clm_sheets.sh \"CLM 이관_하림_마이그레이션_애그리로보택.xlsx\""
+        echo "  ./run_extract_sheets_to_json.sh \"CLM_통합.xlsx\""
+        echo "  ./run_extract_sheets_to_json.sh \"CLM_통합.xlsx\" \"output.json\""
         exit 1
     else
         echo "✅ 자동으로 파일을 찾았습니다: $EXCEL_FILE"
@@ -51,22 +49,31 @@ else
     fi
 fi
 
-echo "🚀 통합 시작..."
+echo "🚀 JSON 추출 시작..."
 echo "   입력 파일: $EXCEL_FILE"
 echo ""
 
-"$PYTHON_CMD" "$SCRIPT_DIR/combine_clm_sheets.py" "$EXCEL_FILE"
+# 두 번째 인자가 있으면 출력 경로도 전달
+if [ $# -ge 2 ]; then
+    OUTPUT_JSON="$2"
+    "$PYTHON_CMD" "$SCRIPT_DIR/extract_sheets_to_json.py" "$EXCEL_FILE" "$OUTPUT_JSON"
+else
+    "$PYTHON_CMD" "$SCRIPT_DIR/extract_sheets_to_json.py" "$EXCEL_FILE"
+fi
 
 STATUS=$?
 if [ $STATUS -eq 0 ]; then
-    OUTPUT_FILE="$(dirname "$EXCEL_FILE")/CLM_통합.xlsx"
+    if [ $# -ge 2 ]; then
+        OUTPUT_FILE="$OUTPUT_JSON"
+    else
+        OUTPUT_FILE="$(dirname "$EXCEL_FILE")/$(basename "$EXCEL_FILE" .xlsx).json"
+    fi
     echo ""
-    echo "✅ 통합 완료!"
+    echo "✅ JSON 추출 완료!"
     echo "   결과 파일: $OUTPUT_FILE"
 else
     echo ""
     echo "❌ 처리 중 오류가 발생했습니다. (코드: $STATUS)"
     exit $STATUS
 fi
-
 
