@@ -8,7 +8,7 @@
 
 import pandas as pd
 import time
-import json
+# import json
 import csv
 import re
 from selenium import webdriver
@@ -19,44 +19,26 @@ from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 from datetime import datetime
+from utils.account_env import load_account_env
+from utils.base_url import BASE_URL
 
-def parse_custom_env():
-    """.env 파일을 직접 파싱 (KEY : VALUE 형식 지원)"""
-    env_vars = {}
-    
+account = load_account_env()
+
+def _get_env_key() -> str:
+    env_value = os.getenv("ENV", "prod").strip().lower()
+    return "PROD" if env_value in ("prod", "production") else "DEV"
+
+def _get_role_key() -> str:
+    return os.getenv("ROLE", "master").strip()
+
+def _get_credentials():
+    env_key = _get_env_key()  # "PROD" 또는 "DEV"
+    role_key = _get_role_key()  # 기본 "master"
     try:
-        # .env 파일 읽기
-        with open('.env', 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                
-                # 주석이나 빈 줄 무시
-                if not line or line.startswith('#'):
-                    continue
-                
-                # KEY : VALUE 형식 파싱
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    # 따옴표 제거
-                    value = value.strip('"').strip("'")
-                    
-                    env_vars[key] = value
-                    
-        return env_vars
-    except Exception as e:
-        print(f"⚠ .env 파일 읽기 실패: {e}")
-        return {}
-
-# .env 파일 파싱
-env_vars = parse_custom_env()
-
-# 환경변수 가져오기 (줄 시작부터 공백 없이 매칭)
-BASE_URL = {
-    'PRODUCTION': env_vars.get('prod_BASE_URL', '').strip() or env_vars.get('dev_BASE_URL', '').strip(),
-}
+        cred = account[env_key][role_key]
+        return cred.get("id", ""), cred.get("password", "")
+    except Exception:
+        return "", ""
 
 class ContractComparator:
     def __init__(self):
@@ -85,7 +67,7 @@ class ContractComparator:
         """웹사이트 로그인"""
         try:
             print("로그인 시도 중...")
-            self.driver.get(BASE_URL['PRODUCTION'])
+            self.driver.get(BASE_URL.PRODUCTION)
             
             # 페이지 로딩 대기
             time.sleep(3)
@@ -241,7 +223,7 @@ class ContractComparator:
         """체결 계약서 조회 메뉴로 이동"""
         try:
             print("체결 계약서 조회 페이지로 이동 중...")
-            contract_url = BASE_URL['PRODUCTION'] + "/clm/complete?page=0"
+            contract_url = BASE_URL.PRODUCTION + "/clm/complete?page=0"
             print(f"URL: {contract_url}")
             
             self.driver.get(contract_url)
@@ -337,7 +319,7 @@ class ContractComparator:
                 print(f"\n--- page={page_num} 추출 중 ---")
                 
                 # 현재 페이지 URL
-                current_url = f"{BASE_URL['PRODUCTION']}/clm/complete?page={page_num}"
+                current_url = f"{BASE_URL.PRODUCTION}/clm/complete?page={page_num}"
                 self.driver.get(current_url)
                 time.sleep(3)
                 
@@ -1001,7 +983,7 @@ class ContractComparator:
                 print(f"--- page={page_num} 처리 중 ---")
                 
                 # 현재 페이지 URL로 이동
-                current_url = f"{BASE_URL['PRODUCTION']}/clm/complete?page={page_num}"
+                current_url = f"{BASE_URL.PRODUCTION}/clm/complete?page={page_num}"
                 self.driver.get(current_url)
                 time.sleep(3)
                 
@@ -1106,12 +1088,13 @@ class ContractComparator:
 
 def main():
     """메인 함수"""
-    # 설정 - .env 파일에서 환경변수 읽기
-    username = env_vars.get('prod_ID', '').strip() or env_vars.get('dev_ID', '').strip()
-    password = env_vars.get('prod_PW', '').strip() or env_vars.get('dev_PW', '').strip()
+    # 계정 JSON에서 자격증명 선택 (ENV=prod|dev, ROLE=master 등)
+    username, password = _get_credentials()
     
-    print(f"\n환경변수 확인:")
-    print(f"  - BASE_URL: {BASE_URL.get('PRODUCTION', '설정되지 않음')}")
+    print(f"\n실행 환경 확인:")
+    print(f"  - ENV: {_get_env_key()}")
+    print(f"  - ROLE: {_get_role_key()}")
+    print(f"  - BASE_URL: {BASE_URL.PRODUCTION}")
     print(f"  - Username: {username}")
     print(f"  - Password: {'설정됨' if password else '설정되지 않음'}\n")
     
