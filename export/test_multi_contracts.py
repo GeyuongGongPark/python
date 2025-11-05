@@ -1,3 +1,11 @@
+"""여러 계약서 상세 페이지를 순회하며 구조를 점검/로그하는 테스트 스크립트.
+
+주요 기능
+- 로그인 후 계약서 목록에서 상위 N개 링크를 수집
+- 각 상세 페이지의 테이블/구조/데이터 후보 요소를 스캔하여 콘솔에 요약 출력
+- 초반 일부 페이지의 HTML 스니펫을 출력해 패턴 파악에 도움 제공
+"""
+
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By

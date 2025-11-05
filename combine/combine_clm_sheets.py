@@ -1,3 +1,23 @@
+"""CLM 다중 시트 병합 도구.
+
+개요
+- 입력: 개별/다중 Excel 파일(디렉터리 지정 시 내부 *.xlsx 일괄 처리)
+- 처리:
+  1) 모든 시트를 헤더 없이 로드한 뒤 A1을 헤더로 재구성
+  2) 베이스 시트(예: CLM등록)를 기준으로 기타 시트의 컬럼을 프리픽스 붙여 병합
+  3) 특수 시트 처리(예: 첨부파일 → 파일명만 키 기준으로 콤마 결합)
+  4) 인적정보등록에서 기업명(법인명) 매핑하여 상대계약자에 요약 컬럼 추가
+  5) 충돌/중복 열 이름 정리 후 결과 저장
+- 출력: "통합" 시트를 가진 결과 워크북(파일명 규칙에 따라 done 폴더에 저장)
+
+사용 예시
+    # 디렉터리 내 모든 .xlsx 처리
+    python combine_clm_sheets.py /path/to/folder
+
+    # 단일 파일 처리
+    python combine_clm_sheets.py /path/to/file.xlsx
+"""
+
 import sys
 import re
 from pathlib import Path
@@ -64,26 +84,22 @@ def read_all_sheets(input_path: Path) -> Dict[str, pd.DataFrame]:
     return {name: xls.parse(name) for name in xls.sheet_names}
 
 
-def frame_from_B2_as_header(df_raw: pd.DataFrame) -> pd.DataFrame:
-    """주어진 원본 DataFrame(header=None 기반)을 B2를 헤더로 사용하도록 변환한다.
-    - B2(행 index 1, 열 index 1)를 기준으로 잘라낸 뒤, 잘린 프레임의 첫 행을 컬럼으로 설정
-    - 결과 데이터는 B3부터 시작
+def frame_from_A1_as_header(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """주어진 원본 DataFrame(header=None 기반)을 A1을 헤더로 사용하도록 변환한다.
+    - A1(행 index 0, 열 index 0)을 헤더로 사용
+    - 결과 데이터는 A2(행 index 1)부터 시작
     - 공백/문자열 정리 적용
     비어있거나 충분한 영역이 없으면 빈 DataFrame 반환
     """
     if df_raw is None or df_raw.empty:
         return pd.DataFrame()
-    # 최소 2행 2열 필요
-    if df_raw.shape[0] < 2 or df_raw.shape[1] < 2:
-        return pd.DataFrame()
-
-    trimmed = df_raw.iloc[1:, 1:].reset_index(drop=True)
-    if trimmed.empty:
+    # 최소 2행 필요
+    if df_raw.shape[0] < 2:
         return pd.DataFrame()
 
     # 첫 행을 헤더로 사용
-    new_header = trimmed.iloc[0].astype(str).map(lambda x: str(x).strip())
-    df = trimmed.iloc[1:].copy()
+    new_header = df_raw.iloc[0].astype(str).map(lambda x: str(x).strip())
+    df = df_raw.iloc[1:].copy().reset_index(drop=True)
     df.columns = [str(c).strip() for c in new_header]
     return df
 
@@ -91,27 +107,24 @@ def frame_from_B2_as_header(df_raw: pd.DataFrame) -> pd.DataFrame:
 def consolidate_by_no(input_excel: Path, output_excel: Path) -> None:
     xls = pd.ExcelFile(input_excel)
 
-    # 베이스 시트: CLM등록(변형 표기 허용)
+    # 베이스 시트: CLM
     base_sheet = resolve_sheet(xls, [
-        "CLM등록",
-        "CLM 등록",
-        "CLM_REG",
-        "등록",
+        "CLM",
     ])
     if base_sheet is None:
         raise ValueError("베이스 시트(예: 'CLM등록')를 찾지 못했습니다.")
 
-    # 모든 시트를 미리 읽되, 각 시트를 헤더 없이 로드하여 B2를 헤더로 변환
+    # 모든 시트를 미리 읽되, 각 시트를 헤더 없이 로드하여 A1을 헤더로 변환
     xls_all = pd.ExcelFile(input_excel)
     raw_sheets: Dict[str, pd.DataFrame] = {name: xls_all.parse(name, header=None) for name in xls_all.sheet_names}
-    sheets: Dict[str, pd.DataFrame] = {name: frame_from_B2_as_header(df) for name, df in raw_sheets.items()}
+    sheets: Dict[str, pd.DataFrame] = {name: frame_from_A1_as_header(df) for name, df in raw_sheets.items()}
 
     # 특수 처리: 상대계약자 시트에 인적정보등록의 "기업명(법인명)" 매핑 및 CLM NO. 기준 콤마 병합
     rel_sheet_name = resolve_sheet(xls, [
-        "상대계약자", "상대 계약자",
+        "CLM_CUSTOMER",
     ])
     person_sheet_name = resolve_sheet(xls, [
-        "인적정보등록", "인적 정보등록", "인적정보 등록",
+        "CLM_USER_CONTACT",
     ])
     if rel_sheet_name and person_sheet_name:
         df_rel = sheets.get(rel_sheet_name)
@@ -218,7 +231,7 @@ def consolidate_by_no(input_excel: Path, output_excel: Path) -> None:
 
     # CLM카테고리 매핑: 대분류/분류 컬럼에 카테고리이름 매핑 (요구사항 1)
     category_sheet_name = resolve_sheet(xls, [
-        "CLM카테고리", "CLM 카테고리", "카테고리",
+        "CLM_CATEGORY",
     ])
     if category_sheet_name:
         df_category = sheets.get(category_sheet_name)
@@ -319,8 +332,12 @@ def consolidate_by_no(input_excel: Path, output_excel: Path) -> None:
         df = df.copy()
         df[target_key] = df[target_key].astype(str).str.strip()
 
-        # 특수 처리: 첨부파일 시트는 파일명 컬럼만 가져오기 (요구사항 3)
-        if "첨부파일" in sheet_name or "첨부 파일" in sheet_name:
+        # 특수 처리: 첨부파일 시트는 파일명 컬럼만 가져오기
+        # 새 명칭만 허용: CLM_FILE, CLMATTACHMENT
+        if (
+            _normalize_colname(sheet_name) in {"clmfile", "clmattachment"}
+            or sheet_name in {"CLM_FILE", "CLMATTACHMENT"}
+        ):
             filename_col = resolve_column(df, [
                 "파일명", "파일 이름", "파일명칭",
             ])
@@ -415,38 +432,30 @@ def main(argv: List[str]) -> None:
         print(f"입력 경로를 찾을 수 없습니다: {target_arg}")
         sys.exit(1)
 
-    # 디렉토리 처리: 내부의 .xlsx 파일 모두 처리 (done 하위 폴더에 저장)
-    if target_arg.is_dir():
+    # 입력 경로가 파일이면 그 파일이 있는 폴더를, 디렉터리면 그대로 사용
+    if target_arg.is_file():
+        input_dir = target_arg.parent
+    else:
         input_dir = target_arg
-        done_dir = input_dir / "done"
-        done_dir.mkdir(parents=True, exist_ok=True)
 
-        excel_files = sorted([p for p in input_dir.glob("*.xlsx") if p.is_file() and p.parent == input_dir])
-        if not excel_files:
-            print(f"📁 '{input_dir}'에서 .xlsx 파일을 찾을 수 없습니다.")
-            sys.exit(1)
-
-        print(f"🚀 다중 처리 시작: {len(excel_files)}개 파일")
-        for f in excel_files:
-            try:
-                out_name = _make_output_name_from_input(f)
-                output_path = done_dir / out_name
-                consolidate_by_no(f, output_path)
-            except Exception as e:
-                print(f"❌ 실패: {f.name} → {e}")
-        print(f"✅ 완료: 결과는 '{done_dir}' 폴더에 저장되었습니다.")
-        return
-
-    # 단일 파일 처리
-    input_file = target_arg
-    if not input_file.is_file():
-        print(f"파일이 아닙니다: {input_file}")
-        sys.exit(1)
-    out_name = _make_output_name_from_input(input_file)
-    done_dir = input_file.parent / "done"
+    # 동일 폴더 내 모든 .xlsx 파일 처리 (done 하위 폴더에 저장)
+    done_dir = input_dir / "done"
     done_dir.mkdir(parents=True, exist_ok=True)
-    output_path = done_dir / out_name
-    consolidate_by_no(input_file, output_path)
+
+    excel_files = sorted([p for p in input_dir.glob("*.xlsx") if p.is_file() and p.parent == input_dir])
+    if not excel_files:
+        print(f"📁 '{input_dir}'에서 .xlsx 파일을 찾을 수 없습니다.")
+        sys.exit(1)
+
+    print(f"🚀 다중 처리 시작: {len(excel_files)}개 파일")
+    for f in excel_files:
+        try:
+            out_name = _make_output_name_from_input(f)
+            output_path = done_dir / out_name
+            consolidate_by_no(f, output_path)
+        except Exception as e:
+            print(f"❌ 실패: {f.name} → {e}")
+    print(f"✅ 완료: 결과는 '{done_dir}' 폴더에 저장되었습니다.")
 
 
 if __name__ == "__main__":

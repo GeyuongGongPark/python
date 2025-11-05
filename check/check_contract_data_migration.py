@@ -1,3 +1,11 @@
+"""로폼(원본) 시트 vs 로아이(웹 수집) 시트 컬럼 비교 리포트 생성 스크립트.
+
+개요
+- 입력: 문서비교.xlsx (시트: 로폼, 로아이)
+- 처리: 관리번호/계약명/진행상태/상대계약자/요청자/검토담당자에 대해 Fuzzy 매칭
+- 출력: 불일치 항목을 시트별로 정리한 Excel 파일(column_comparison_results.xlsx)
+"""
+
 import pandas as pd
 from fuzzywuzzy import fuzz
 

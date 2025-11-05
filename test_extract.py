@@ -1,3 +1,10 @@
+"""특정 계약서 상세 페이지에서 텍스트/스크린샷/페이지소스를 수집하는 테스트.
+
+기능
+- 로그인 → 특정 CLM 상세 페이지 이동 → 계약/상세 영역 텍스트 출력
+- 스크린샷과 HTML 소스를 로컬 파일로 저장
+"""
+
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By

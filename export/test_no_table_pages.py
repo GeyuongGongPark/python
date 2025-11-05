@@ -1,3 +1,11 @@
+"""테이블 요소가 없는 계약서 상세 페이지를 탐지/분석하는 테스트 스크립트.
+
+주요 기능
+- 로그인 → 계약서 목록 순회 → 테이블 없는 상세 페이지 탐지
+- dl, section, main 등 대체 구조의 존재 여부와 일부 내용을 출력
+- HTML 전체를 파일로 저장해 사후 분석에 활용
+"""
+
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By

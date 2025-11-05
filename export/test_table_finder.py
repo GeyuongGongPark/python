@@ -1,3 +1,11 @@
+"""계약서 상세 페이지에서 테이블 요소를 탐색/분석하는 테스트 스크립트.
+
+주요 기능
+- 로그인 후 첫 계약서로 이동하여 테이블/셀 구조를 상세 출력
+- XPath 생성 시도, 앞/뒤 형제 요소 개수, ID/class 기반 접근 등 다양한 접근을 로그로 제공
+- 페이지 HTML 일부를 덤프하여 후속 파싱 규칙 수립에 활용
+"""
+
 import time
 import json
 from selenium import webdriver

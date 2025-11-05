@@ -1,4 +1,12 @@
+"""환경설정(.env)에서 BASE_URL을 로드해 서비스별 엔드포인트를 구성하는 모듈.
+
+용도
+- .env의 prod_BASE_URL/dev_BASE_URL 값을 읽어 기본 URL 결정
+- 로그인/CLM/대량생성/SEAL/자문/송무/법령/프로젝트/설정 등 페이지별 경로 상수 제공
+"""
+
 import os
+from utils.account_env import load_account_env
 
 def parse_custom_env():
     """.env 파일을 직접 파싱 (KEY : VALUE 형식 지원)"""
@@ -30,11 +38,36 @@ def parse_custom_env():
         print(f"⚠ .env 파일 읽기 실패: {e}")
         return {}
 
-# .env 파일 파싱
+"""환경 변수(.env)와 Account JSON을 함께 고려하여 BASE_URL을 결정한다.
+우선순위: Account/<ACCOUNT>.json의 base_url (ENV에 따라 선택) → .env의 prod/dev_BASE_URL
+"""
+
+# .env 파일 파싱 (폴백용)
 env_vars = parse_custom_env()
 
-# BASE_URL을 .env에서 가져오기
-PRODUCTION_URL = env_vars.get('prod_BASE_URL', '').strip() or env_vars.get('dev_BASE_URL', '').strip()
+# ENV 판별
+def _get_env_key() -> str:
+    env_value = os.getenv('ENV', 'prod').strip().lower()
+    return 'PROD' if env_value in ('prod', 'production') else 'DEV'
+
+# Account JSON에서 base_url 우선 사용
+try:
+    _account = load_account_env()
+    _env_key = _get_env_key()
+    _json_base_url = ''
+    try:
+        _json_base_url = (_account.get(_env_key, {}) or {}).get('base_url', '')
+    except Exception:
+        _json_base_url = ''
+except Exception:
+    _json_base_url = ''
+
+# 최종 BASE URL 결정: JSON 우선, 없으면 .env
+PRODUCTION_URL = (
+    _json_base_url.strip()
+    or env_vars.get('prod_BASE_URL', '').strip()
+    or env_vars.get('dev_BASE_URL', '').strip()
+)
 
 class BASE_URL:
     PRODUCTION = PRODUCTION_URL

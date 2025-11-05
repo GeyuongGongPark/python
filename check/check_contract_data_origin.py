@@ -1,3 +1,11 @@
+"""로아이(정제) vs 로아이원본(원시) 시트 비교 리포트 생성 스크립트.
+
+개요
+- 입력: 문서비교.xlsx (시트: 로아이, 로아이원본)
+- 처리: 주요 필드의 Fuzzy 매칭으로 유사도 계산 및 불일치 분류
+- 출력: 불일치 항목을 시트별로 정리한 Excel 파일(roai_comparison_results.xlsx)
+"""
+
 import pandas as pd
 from fuzzywuzzy import fuzz
 
