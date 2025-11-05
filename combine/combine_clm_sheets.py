@@ -112,7 +112,7 @@ def consolidate_by_no(input_excel: Path, output_excel: Path) -> None:
         "CLM",
     ])
     if base_sheet is None:
-        raise ValueError("베이스 시트(예: 'CLM등록')를 찾지 못했습니다.")
+        raise ValueError("베이스 시트(예: 'CLM')를 찾지 못했습니다.")
 
     # 모든 시트를 미리 읽되, 각 시트를 헤더 없이 로드하여 A1을 헤더로 변환
     xls_all = pd.ExcelFile(input_excel)
