@@ -2,8 +2,8 @@
 
 개요
 - 입력: 
-  - 통합본 폴더의 엑셀 파일들 (check/통합본/*.xlsx)
-  - raw_data 폴더의 JSON 파일들 (check/raw_data/**/selectDetail.json)
+- 통합본 폴더의 엑셀 파일들 (check/통합본/*.xlsx)
+- raw_data 폴더의 JSON 파일들 (check/raw_data/**/selectDetail.json)
 - 처리: 주요 필드의 Fuzzy 매칭으로 유사도 계산 및 불일치 분류
 - 출력: 불일치 항목을 시트별로 정리한 Excel 파일
 """
@@ -555,9 +555,10 @@ def compare_excel_with_json(
                     for mismatch in all_mismatches:
                         print(f"      • {mismatch['엑셀_컬럼명']}: {mismatch['비고']}")
         
-        # 결과를 DataFrame으로 변환
+        # 결과를 DataFrame으로 변환 (불일치 항목만 저장)
         result_dfs = {}
         
+        # 불일치 항목이 있는 경우에만 시트 생성
         if management_mismatch:
             result_dfs['관리번호_불일치'] = pd.DataFrame(management_mismatch)
         if contract_mismatch:
@@ -573,14 +574,15 @@ def compare_excel_with_json(
         if all_fields_mismatch:
             result_dfs['전체필드_불일치'] = pd.DataFrame(all_fields_mismatch)
         
-        # 결과 저장
+        # 불일치 항목이 있는 경우에만 결과 파일 저장
         if result_dfs:
             output_file = output_path / f"{excel_path.stem}_비교결과.xlsx"
             with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
                 for sheet_name, df_result in result_dfs.items():
+                    # 불일치 항목만 포함된 DataFrame 저장
                     df_result.to_excel(writer, sheet_name=sheet_name, index=False)
             
-            print(f"  [완료] 결과 저장: {output_file.name}")
+            print(f"  [완료] 불일치 항목만 저장: {output_file.name}")
             print(f"    - 관리번호 불일치: {len(management_mismatch)}개")
             print(f"    - 계약명 불일치: {len(contract_mismatch)}개")
             print(f"    - 진행상태 불일치: {len(status_mismatch)}개")
@@ -589,7 +591,7 @@ def compare_excel_with_json(
             print(f"    - 종합 불일치: {len(overall_mismatch)}개")
             print(f"    - 전체 필드 불일치: {len(all_fields_mismatch)}개")
         else:
-            print(f"  [완료] 모든 데이터가 일치합니다!")
+            print(f"  [완료] 모든 데이터가 일치합니다! 결과 파일을 생성하지 않습니다.")
     
     except Exception as e:
         print(f"  [오류] {excel_path.name} 처리 실패: {e}")
